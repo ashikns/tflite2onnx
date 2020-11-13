@@ -22,7 +22,10 @@ class Quantize(Operator):
 
     @property
     def type(self):
-        return 'QuantizeLinear' if self.isQuantize else 'DequantizeLinear'
+        if not self.status.parsed:
+            return '(De)QuantizeLinear'
+        else:
+            return 'QuantizeLinear' if self.isQuantize else 'DequantizeLinear'
 
     @property
     def isQuantize(self):
