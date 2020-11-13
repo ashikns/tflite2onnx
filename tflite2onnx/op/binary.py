@@ -15,6 +15,8 @@ class Binary(Operator):
     TypeMapping = {
         tflite.BuiltinOperator.ADD: 'Add',
         tflite.BuiltinOperator.MUL: 'Mul',
+        tflite.BuiltinOperator.MAXIMUM: 'Max',
+        tflite.BuiltinOperator.MINIMUM: 'Min',
     }
 
     OptionMapping = {
@@ -45,6 +47,8 @@ class Binary(Operator):
         b = self.inputs[1]
         output = self.outputs[0]
         if (len(a.shape) == len(b.shape)):
+            return
+        if(a.isScalar | b.isScalar):
             return
         logger.info("Inserting `Reshape` for fake broadcasting, be carefull for the layout")
 
@@ -99,10 +103,12 @@ class Binary(Operator):
 
         # options
         op_opt = op.BuiltinOptions()
-        option = self.OptionMapping[opcode]()
-        option.Init(op_opt.Bytes, op_opt.Pos)
 
-        handleFusedActivation(self, option, ot)
+        if op_opt != None:
+            option = self.OptionMapping[opcode]()
+            option.Init(op_opt.Bytes, op_opt.Pos)
+
+            handleFusedActivation(self, option, ot)
 
         self.setParsed()
 
