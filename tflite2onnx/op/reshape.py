@@ -76,13 +76,16 @@ class Reshape(Operator):
         return list()
 
     def transform(self):
-        if not self.forFakeBroadcasting:
-            return
         i = self.inputs[0]
         o = self.outputs[0]
         assert(len(i.shape) != len(o.shape))
         shape_t = self.inputs[1]
+
+        if shape_t.explicit_transformed:
+            return
+
         layout = copy.deepcopy(o.layout)
         if layout is None:
             raise ValueError("Requires layout description for <%s>" % i.name)
         shape_t.data = layout.transform(shape_t.data)
+        shape_t.explicit_transformed = True

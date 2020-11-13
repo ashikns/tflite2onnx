@@ -17,6 +17,8 @@ class Tensor(T2OBase):
         self.shape = []
         self.dtype = None
         self.data = None
+        
+        self.explicit_transformed = False
 
         # the defaults of quantization parameter
         self.scale = 1.0
