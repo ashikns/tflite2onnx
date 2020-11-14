@@ -9,8 +9,7 @@ logger = logging.getLogger('tflite2onnx')
 
 class Quantize(Operator):
     TypeMapping = {
-        tflite.BuiltinOperator.QUANTIZE: 'QuantizeLinear',
-        tflite.BuiltinOperator.DEQUANTIZE: 'DequantizeLinear',
+        tflite.BuiltinOperator.DEQUANTIZE: 'Cast',
     }
 
     def __init__(self, TFactory, index):
@@ -22,49 +21,26 @@ class Quantize(Operator):
 
     @property
     def type(self):
-        if not self.status.parsed:
-            return '(De)QuantizeLinear'
-        else:
-            return 'QuantizeLinear' if self.isQuantize else 'DequantizeLinear'
-
-    @property
-    def isQuantize(self):
-        assert(self.status.parsed)
-        return self.inputs[0].dtype is TensorProto.FLOAT
+        return 'Cast'
 
     def parse(self):
         logger.debug("Parsing %s...", self.shorty)
         op = self.tflite
         opcode = self.model.OperatorCodes(op.OpcodeIndex()).BuiltinCode()
-        assert(opcode is tflite.BuiltinOperator.QUANTIZE or tflite.BuiltinOperator.DEQUANTIZE)
+        assert(opcode is tflite.BuiltinOperator.DEQUANTIZE)
 
         assert(op.InputsLength() == 1)
         assert(op.OutputsLength() == 1)
         self.parseInput(0)
         self.parseOutput(0)
+        assert(self.inputs[0].isInitializer)
+
+        self.attrs['to'] = int(TensorProto.FLOAT)
 
         self.setParsed()
 
     def propagatableTensors(self):
         return self.inputs + self.outputs
-
-    def dequantize(self):
-        if self.isQuantize:
-            ft = self.inputs[0]
-            qt = self.outputs[0]
-        else:
-            qt = self.inputs[0]
-            ft = self.outputs[0]
-
-        ft.dequantize()
-        # assert(qt.quantized)
-
-        st = self.TFactory.createQuantScale(qt)
-        st.addConsumer(self)
-        self.inputs.append(st)
-        zpt = self.TFactory.createQuantZeroPoint(qt)
-        zpt.addConsumer(self)
-        self.inputs.append(zpt)
 
     def transform(self):
         pass
