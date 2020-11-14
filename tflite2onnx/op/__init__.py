@@ -5,6 +5,7 @@ from tflite2onnx.op.common import OpFactory
 from tflite2onnx.op.common import Operator  # noqa: F401
 from tflite2onnx.op.concat import Concat
 from tflite2onnx.op.conv import Conv
+from tflite2onnx.op.conv_transpose import ConvTranspose
 from tflite2onnx.op.fullyconnected import FullyConnected
 from tflite2onnx.op.hardswish import HardSwish
 from tflite2onnx.op.padding import Padding
@@ -22,6 +23,7 @@ from tflite2onnx.op.unary import Unary
 OpFactory.register(Binary)
 OpFactory.register(Concat)
 OpFactory.register(Conv)
+OpFactory.register(ConvTranspose)
 OpFactory.register(FullyConnected)
 OpFactory.register(HardSwish)
 OpFactory.register(Padding)
