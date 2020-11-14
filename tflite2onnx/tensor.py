@@ -2,7 +2,7 @@ import copy
 import logging
 import numpy as np
 import onnx
-from onnx import helper, TensorProto
+from onnx import helper, numpy_helper, TensorProto
 
 from tflite2onnx import mapping
 from tflite2onnx.common import T2OBase
@@ -117,7 +117,7 @@ class Tensor(T2OBase):
 
         self.data = TensorFactory.getData(self.model, self.graph, self.index,
                                           mapping.DTYPE_ONNX2NAME[self.dtype])
-
+        
         self.setParsed()
 
     def transform(self):
@@ -143,7 +143,7 @@ class Tensor(T2OBase):
             return
         logger.debug("Converting %s...", self.shorty)
         if self.isInitializer:
-            self.onnx = helper.make_tensor(self.name, self.dtype, self.shape, self.data)
+            self.onnx = numpy_helper.from_array(self.data.reshape(self.shape), self.name)
             onnx.checker.check_tensor(self.onnx)
         else:
             self.onnx = helper.make_tensor_value_info(self.name, self.dtype, self.shape)
@@ -260,7 +260,7 @@ class TensorFactory:
 
     @staticmethod
     def getData(model, graph, index, dtype):
-        assert(dtype in ['int32', 'float32', 'uint8'])
+        assert(dtype in ['int32', 'float32', 'float16', 'uint8'])
         assert(index < graph.TensorsLength())
         t = graph.Tensors(index)
         bi = t.Buffer()
