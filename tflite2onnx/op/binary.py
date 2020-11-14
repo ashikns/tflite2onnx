@@ -24,17 +24,22 @@ class Binary(Operator):
         tflite.BuiltinOperator.MUL: tflite.MulOptions,
     }
 
-    def __init__(self, TFactory, index):
+    def __init__(self, TFactory, index, preset_opcode=None):
         super().__init__(TFactory, index)
         self.setInited()
+        self.preset_opcode = preset_opcode
 
     @property
     def type(self):
         if self.status.uninitialized:
             return 'Binary'
         else:
-            op = self.tflite
-            opcode = self.model.OperatorCodes(op.OpcodeIndex()).BuiltinCode()
+            assert(self.tflite is not self.preset_opcode)
+            if self.preset_opcode is not None:
+                opcode = self.preset_opcode
+            else:
+                op = self.tflite
+                opcode = self.model.OperatorCodes(op.OpcodeIndex()).BuiltinCode()
             assert(opcode in self.TypeMapping)
             return self.TypeMapping[opcode]
 
