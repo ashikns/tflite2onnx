@@ -1,9 +1,11 @@
 import copy
 import logging
+import numpy
 import tflite
 
 from tflite2onnx.op.activation import handleFusedActivation
 from tflite2onnx.op.common import Operator
+from tflite2onnx.op.flatten import Flatten
 
 logger = logging.getLogger('tflite2onnx')
 
@@ -39,7 +41,7 @@ class FullyConnected(Operator):
         assert(op.OutputsLength() == 1)
 
         # input
-        self.parseInput(0)
+        input = self.parseInput(0)
 
         # weight
         self.parseInput(1)
@@ -48,24 +50,41 @@ class FullyConnected(Operator):
         self.parseInput(2, is_bias=True)
 
         # output
-        ot = self.parseOutput(0)
+        output = self.parseOutput(0)
 
         # options
         op_opt = op.BuiltinOptions()
         option = tflite.FullyConnectedOptions()
         option.Init(op_opt.Bytes, op_opt.Pos)
 
-        if option.KeepNumDims():
-            input = self.inputs[0]
-            output = self.outputs[0]
-            assert(len(input.shape) == len(output.shape))
+        if len(input.shape) > 2:
+            flatten = Flatten(self.TFactory, -1)
+            self.pre.append(flatten)
 
-            if (not input.layout is None) & (output.layout is None):
-                output.layout = copy.deepcopy(input.layout)
+            fname = 'TFLITE2ONNX_GEMM_FLATTEN_%s' % input.name
+            flat = self.TFactory.getWithRef(input, fname, True)
+            flat.shape = [1, numpy.prod(input.shape).item()]
+
+            output.shape = copy.deepcopy(flat.shape)
+            
+            self.replaceInput(input, flat)
+            flat.addConsumer(self)
+
+            flatten.inputs.append(input)
+            input.replaceConsumer(self, flatten)
+
+            flatten.outputs.append(flat)
+            flat.addProducer(flatten)
+
+            flatten.setParsed()
+            flat.setParsed()
+        else:
+            assert(len(input.shape) == 2)
+            output.shape = copy.deepcopy(input.shape)
 
         assert(option.WeightsFormat() is tflite.FullyConnectedOptionsWeightsFormat.DEFAULT)
 
-        handleFusedActivation(self, option, ot)
+        handleFusedActivation(self, option, output)
 
         self.setParsed()
 

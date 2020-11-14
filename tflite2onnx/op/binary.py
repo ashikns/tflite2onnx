@@ -70,7 +70,7 @@ class Binary(Operator):
         shape_t = self.TFactory.getWithRef(todo, shape_t_name, True)
         shape_t.dtype = mapping.DTYPE_NAME2ONNX['int64']
         shape_t.shape = (len(new_shape),)
-        shape_t.data = np.array(new_shape)
+        shape_t.data = np.array(new_shape).astype('int64')
         shape_t.setParsed()
 
         reshape = Reshape(self.TFactory, -1)

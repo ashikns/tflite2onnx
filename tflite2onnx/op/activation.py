@@ -1,3 +1,4 @@
+import copy
 import logging
 import tflite
 
@@ -28,8 +29,11 @@ class Logistic(Operator):
 
         assert (op.InputsLength() == 1)
         assert (op.OutputsLength() == 1)
-        self.parseInput(0)
-        self.parseOutput(0)
+        input = self.parseInput(0)
+        output = self.parseOutput(0)
+
+        if len(input.shape) != len(output.shape):
+            output.shape = copy.deepcopy(input.shape)
 
         self.setParsed()
 
@@ -81,7 +85,7 @@ class ReLU(Operator):
             assert(op.InputsLength() == 1)
         assert(op.OutputsLength() == 1)
 
-        self.parseInput(0)
+        input = self.parseInput(0)
 
         if opcode == tflite.BuiltinOperator.RELU6:
             tmin = self.TFactory.createScalar('float32', 0.0)
@@ -99,7 +103,10 @@ class ReLU(Operator):
             alpha = self.parseInput(1)
             alpha.shape.insert(0, 1)
 
-        self.parseOutput(0)
+        output = self.parseOutput(0)
+
+        if (opcode == tflite.BuiltinOperator.RELU) & (len(input.shape) != len(output.shape)):
+            output.shape = copy.deepcopy(input.shape)
 
         self.setParsed()
 

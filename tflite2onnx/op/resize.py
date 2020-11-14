@@ -74,7 +74,7 @@ class Resize(Operator):
         assert len(sz.data) == 2
         assert len(im.shape) == 4
         sz.shape = [len(im.shape)]
-        sz.data = np.concatenate((np.array([im.shape[0], im.shape[-1]]), sz.data))
+        sz.data = np.concatenate((np.array([im.shape[0], im.shape[-1]]), sz.data)).astype('int64')
         sz.dtype = mapping.DTYPE_NAME2ONNX['int64']
 
         # output

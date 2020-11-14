@@ -128,7 +128,7 @@ class Tensor(T2OBase):
             self.shape = self.layout.transform(self.shape)
             data = data.transpose(self.layout.perm)
             self.data = data.flatten()
-        else:
+        elif len(self.shape) == 4:
             self.shape = self.layout.transform(self.shape)
 
     def validate(self):
@@ -227,7 +227,7 @@ class TensorFactory:
             t = Tensor(self.model, self.graph, -1, None)
             t.name = name
             t.dtype = mapping.DTYPE_NAME2ONNX['float32']
-            t.data = np.array([])
+            t.data = np.array([], dtype='float32')
             t.shape = [0]
             t.setParsed()
             self.registery[name] = t

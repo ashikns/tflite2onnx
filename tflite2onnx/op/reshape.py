@@ -87,5 +87,5 @@ class Reshape(Operator):
         layout = copy.deepcopy(o.layout)
         if layout is None:
             raise ValueError("Requires layout description for <%s>" % i.name)
-        shape_t.data = layout.transform(shape_t.data)
+        shape_t.data = np.array(layout.transform(shape_t.data))
         shape_t.explicit_transformed = True
