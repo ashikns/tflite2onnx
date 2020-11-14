@@ -54,7 +54,11 @@ class FullyConnected(Operator):
         option = tflite.FullyConnectedOptions()
         option.Init(op_opt.Bytes, op_opt.Pos)
 
-        assert(not option.KeepNumDims())
+        if option.KeepNumDims():
+            input = self.inputs[0]
+            output = self.outputs[0]
+            assert(len(input.shape) == len(output.shape))
+
         assert(option.WeightsFormat() is tflite.FullyConnectedOptionsWeightsFormat.DEFAULT)
 
         handleFusedActivation(self, option, ot)
