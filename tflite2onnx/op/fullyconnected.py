@@ -1,3 +1,4 @@
+import copy
 import logging
 import tflite
 
@@ -58,6 +59,9 @@ class FullyConnected(Operator):
             input = self.inputs[0]
             output = self.outputs[0]
             assert(len(input.shape) == len(output.shape))
+
+            if (not input.layout is None) & (output.layout is None):
+                output.layout = copy.deepcopy(input.layout)
 
         assert(option.WeightsFormat() is tflite.FullyConnectedOptionsWeightsFormat.DEFAULT)
 
