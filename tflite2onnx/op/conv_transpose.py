@@ -1,6 +1,7 @@
 import logging
 import tflite
 import struct
+import collections
 
 from tflite2onnx.layout import Layout
 from tflite2onnx.op.activation import handleFusedActivation
@@ -13,7 +14,6 @@ logger = logging.getLogger('tflite2onnx')
 class ConvTranspose(Operator):
     TypeMapping = {
         tflite.BuiltinOperator.TRANSPOSE_CONV: 'ConvTranspose',
-        tflite.BuiltinOperator.CUSTOM: 'ConvTranspose',
     }
 
     def __init__(self, TFactory, index):
@@ -43,52 +43,43 @@ class ConvTranspose(Operator):
         opcode = self.model.OperatorCodes(op.OpcodeIndex()).BuiltinCode()
         assert(opcode in self.TypeMapping)
 
-        assert(op.InputsLength() == 3), "TFLite Conv always has bias"
+        assert(op.InputsLength() == 4)
         assert(op.OutputsLength() == 1)
 
         # input
         ilayout = Layout('NHWC', 'NCHW')
-        it = self.parseInput(0, ilayout)
+        it = self.parseInput(2, ilayout)
 
         # weight
         wlayout = Layout('CHWM', 'MCHW')
         wt = self.parseInput(1, wlayout)
 
         # bias
-        self.parseInput(2, is_bias=True)
+        self.parseInput(3, is_bias=True)
+
+        # shape
+        osi = self.tflite.Inputs(0)
+        out_shape = self.TFactory.get(osi, None, False)
+        out_shape.parse()
 
         # output
         olayout = Layout('NHWC', 'NCHW')
-        self.parseOutput(0, olayout)
-        # ot = self.parseOutput(0, olayout)
+        ot = self.parseOutput(0, olayout)
+
+        assert(collections.Counter(ot.shape) == collections.Counter(out_shape.data))
 
         # options
-        if opcode is tflite.BuiltinOperator.TRANSPOSE_CONV:           
-            op_opt = op.BuiltinOptions()
-            option = tflite.TransposeConvOptions()
-            option.Init(op_opt.Bytes, op_opt.Pos)
-
-            padding_tf = option.Padding()
-            stride_w_tf = option.StrideW()
-            stride_h_tf = option.StrideH()
-        else:
-            op_opt_buf = op.CustomOptionsAsNumpy()
-            fmt = '@iii'
-            op_opt_data = struct.unpack(fmt, op_opt_buf)
-            assert(len(op_opt_data) == 3)
-
-            pad_types = [None, tflite.Padding.SAME, tflite.Padding.VALID]
-            padding_tf = pad_types[op_opt_data[0]]
-            stride_w_tf = op_opt_data[1]
-            stride_h_tf = op_opt_data[2]
-
+        op_opt = op.BuiltinOptions()
+        option = tflite.TransposeConvOptions()
+        option.Init(op_opt.Bytes, op_opt.Pos)
+            
         self.attrs['dilations'] = [1, 1]
         self.attrs['group'] = 1
         self.attrs['kernel_shape'] = wt.shape[1:3]
-        self.attrs['strides'] = [stride_h_tf, stride_w_tf]
+        self.attrs['strides'] = [option.StrideW(), option.StrideH()]
         # XXX Not enabled as ONNXRuntime has limitation to infer pads for non-1 dilation
-        # self.attrs['auto_pad'] = PaddingMapping[padding_tf]
-        self.attrs['pads'] = computePaddingSize(padding_tf, it.shape[1:3],
+        # self.attrs['auto_pad'] = PaddingMapping[option.Padding()]
+        self.attrs['pads'] = computePaddingSize(option.Padding(), it.shape[1:3],
                                                 self.attrs['kernel_shape'],
                                                 self.attrs['strides'], self.attrs['dilations'])
 
